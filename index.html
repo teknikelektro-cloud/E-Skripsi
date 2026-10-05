@@ -328,7 +328,7 @@ function renderHalaman(){
 }
 
 function viewFor(role,tab){
-  if(role==="admin"&&tab==="akun") return ()=>VIEWS["admin:akun"]()+identitasView();
+  if(role==="admin"&&tab==="akun") return ()=>VIEWS["admin:akun"]()+(S.tb_akun==="identitas"?identitasView():"");
   if(role==="admin") return VIEWS["kaprodi:"+tab]||VIEWS["admin:"+tab];
   return VIEWS[role+":"+tab];
 }
@@ -452,8 +452,10 @@ const VIEWS = {
     const all=S.users.filter(u=>(fr==="all"||u.role===fr)&&(fs==="all"||(fs==="nonaktif")===!!u.nonaktif)&&(!q||[u.nama,u.username,u.nim,u.nidn,u.nip].some(x=>x&&String(x).toLowerCase().includes(q))));
     const pages=Math.max(1,Math.ceil(all.length/PER)), pg=Math.min(S.pgAkun||1,pages), list=all.slice((pg-1)*PER,pg*PER);
     const no=u=>u.nim||u.nidn||u.nip||"—";
+    const tbA=["rekap","identitas"].includes(S.tb_akun)?S.tb_akun:"baru";
+    const segA=`<div class="seg" role="tablist" style="grid-template-columns:repeat(3,1fr)">${[["baru","Akun Baru"],["rekap","Rekap Akun"],["identitas","Identitas Pengguna"]].map(([x,l])=>`<button type="button" role="tab" aria-selected="${tbA===x}" class="${tbA===x?"on":""}" data-seg="akun" data-v="${x}">${l}</button>`).join("")}</div>`;
     return `<section class="panel"><div class="row" style="justify-content:space-between"><h2>Manajemen User</h2>${pend.length?`<span class="pill p-warn">${pend.length} menunggu persetujuan</span>`:""}</div>
-    <h3>Pendaftaran Akun Mahasiswa</h3>
+    ${segA}</section>${tbA==="baru"?`<section class="panel"><h3>Pendaftaran Akun Mahasiswa</h3>
     <p>Periksa data mahasiswa, lalu tetapkan username dan password untuk akunnya.</p>
     ${pend.length?pend.map(r=>`
       <form class="panel" data-akun="${r.id}" style="background:var(--bg)">
@@ -477,8 +479,7 @@ const VIEWS = {
         <label>Password awal<input id="ak_pass" required></label>
       </div>
       <div class="row"><button class="btn pri">Tambah Akun</button></div>
-    </form></section>
-    <section class="panel"><div class="row" style="justify-content:space-between"><div><h3>Daftar Akun</h3><span class="note">Reset mengembalikan password ke default, yaitu nomor induk (NIM, NIDN, atau NIP) pemilik akun.</span></div>
+    </form></section>`:""}${tbA==="rekap"?`<section class="panel"><div class="row" style="justify-content:space-between"><div><h3>Rekap Akun</h3><span class="note">Reset mengembalikan password ke default, yaitu nomor induk (NIM, NIDN, atau NIP) pemilik akun.</span></div>
       <div class="row"><input id="f_cari" type="search" placeholder="Cari nama, username, atau nomor induk" value="${esc(S.cari||"")}" style="width:auto;min-width:230px">
       <select id="f_stat" style="width:auto" aria-label="Status"><option value="all">Semua status</option><option value="aktif" ${fs==="aktif"?"selected":""}>Aktif</option><option value="nonaktif" ${fs==="nonaktif"?"selected":""}>Nonaktif</option></select>
       <select id="f_role" style="width:auto" aria-label="Peran"><option value="all">Semua (${S.users.length})</option>${Object.entries(ROLE).map(([k,l])=>`<option value="${k}" ${fr===k?"selected":""}>${l} (${S.users.filter(u=>u.role===k).length})</option>`).join("")}</select></div></div>
@@ -491,7 +492,7 @@ const VIEWS = {
     </tbody></table></div>
     <div class="row" style="justify-content:space-between"><span class="note">Menampilkan ${all.length?(pg-1)*PER+1:0}–${Math.min(pg*PER,all.length)} dari ${all.length} akun</span>
       <div class="row"><button class="btn" data-pg="${pg-1}" ${pg<=1?"disabled":""}>Sebelumnya</button><span class="mono note">${pg} / ${pages}</span><button class="btn" data-pg="${pg+1}" ${pg>=pages?"disabled":""}>Berikutnya</button></div></div>
-    </section>`;
+    </section>`:""}`;
   },
   "kaprodi:daftar":()=>{
     const pend=S.skripsi.filter(s=>s.status==="menunggu"), sudah=S.skripsi.filter(s=>s.status!=="menunggu"&&!s.arsip).sort((a,b)=>b.id-a.id), tb=S.tabAcc==="rekap"?"rekap":"baru";
