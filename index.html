@@ -290,7 +290,7 @@ function unread(){return S.notif.filter(n=>n.to===S.user?.id&&n.baru).length}
 
 // ===== Render =====
 // Panel yang sedang terbuka, saringan, dan isian sementara tidak terbawa ke pengguna berikutnya
-function resetUI(){for(const k in S)if(k.startsWith("tb_"))delete S[k];S.dokEdit=null;S.dokDel=null;for(const k in KETIK)delete KETIK[k];for(const k of ["baId","jalurPilih","tabAcc","tabPer","tambahPer","bukaPer","pdId","tab","aturId","undId","aturTim","sahId","delId","batalSvId","cariArsip","cari","cariId"])S[k]=null;S.bell=false;S.editJudul=false;S.svDraft={};S.pgAkun=1}
+function resetUI(){for(const k in S)if(k.startsWith("tb_"))delete S[k];S.dokEdit=null;S.dokDel=null;for(const k in KETIK)delete KETIK[k];for(const k of ["noId","baId","jalurPilih","tabAcc","tabPer","tambahPer","bukaPer","pdId","tab","aturId","undId","aturTim","sahId","delId","batalSvId","cariArsip","cari","cariId"])S[k]=null;S.bell=false;S.editJudul=false;S.svDraft={};S.pgAkun=1}
 function renderKeep(){
   const simpan={};document.querySelectorAll("input[id],textarea[id],select[id]").forEach(el=>{if(el.type!=="file"&&el.type!=="radio"&&el.type!=="checkbox")simpan[el.id]=el.value});
   render();
@@ -487,7 +487,8 @@ const VIEWS = {
     ${list.map(u=>`<tr><td><div class="row" style="flex-wrap:nowrap">${avatar(u,30)}<strong>${esc(u.nama)}</strong></div></td><td><span class="pill p-n">${ROLE[u.role]}</span></td><td class="mono">${esc(no(u))}</td><td class="mono">${esc(u.username)}</td>
       <td>${u.pwReset?`<span class="mono pwd">${esc(u.password)}</span><div class="note">Default, direset ${u.pwReset}</div>`:`<span class="mono note">••••••••</span>`}</td>
       <td>${u.nonaktif?`<span class="pill p-bad">Nonaktif</span>`:`<span class="pill p-ok">Aktif</span>`}</td>
-      <td>${u.id===S.user.id?`<span class="note">Akun Anda</span>`:`<div class="row"><button class="btn" data-resetpw="${u.id}">Reset Password</button><button class="btn" data-toggleakun="${u.id}">${u.nonaktif?"Aktifkan":"Nonaktifkan"}</button><button class="btn bad" data-hapusakun="${u.id}">Hapus</button></div>
+      <td>${u.id===S.user.id?`<span class="note">Akun Anda</span>`:`<div class="row"><button type="button" class="btn" data-ubahno="${u.id}">Ubah Nomor Induk</button><button class="btn" data-resetpw="${u.id}">Reset Password</button><button class="btn" data-toggleakun="${u.id}">${u.nonaktif?"Aktifkan":"Nonaktifkan"}</button><button class="btn bad" data-hapusakun="${u.id}">Hapus</button></div>
+        ${S.noId===u.id?`<form class="confirm" data-nomor="${u.id}"><label>${{mahasiswa:"NIM",dosen:"NIDN"}[u.role]||"NIP"} baru<input id="no_${u.id}" value="${esc(u.nim||u.nidn||u.nip||"")}" required inputmode="numeric"></label><div class="note">Nomor ini dicetak pada undangan, Berita Acara, dan Halaman Pengesahan, serta menjadi password setelah Reset Password.</div><div class="row"><button class="btn pri">Simpan</button><button type="button" class="btn" data-ubahno="${u.id}">Batal</button></div></form>`:""}
         ${S.delId===u.id?`<div class="confirm">Hapus akun <strong>${esc(u.username)}</strong> secara permanen?<div class="row"><button class="btn bad" data-yahapus="${u.id}">Ya, Hapus</button><button class="btn" data-act="bataldel">Batal</button></div></div>`:""}`}</td></tr>`).join("")||`<tr><td colspan="7"><div class="empty">Tidak ada akun yang cocok.</div></td></tr>`}
     </tbody></table></div>
     <div class="row" style="justify-content:space-between"><span class="note">Menampilkan ${all.length?(pg-1)*PER+1:0}–${Math.min(pg*PER,all.length)} dari ${all.length} akun</span>
@@ -1369,6 +1370,7 @@ document.addEventListener("click",async e=>{
   if(d.bataltim){S.batalTim=S.batalTim==d.bataltim?null:+d.bataltim;S.aturTim=null;return render()}
   if(d.ba){S.baId=S.baId==d.ba?null:+d.ba;S.undId=null;return render()}
   if(d.unduhba)return unduhBA(d.unduhba);
+  if(d.ubahno){S.noId=S.noId==d.ubahno?null:+d.ubahno;S.delId=null;delete KETIK["no_"+d.ubahno];return render()}
   if(d.yabataltim){S.batalTim=null;if(await kirim("tim_batal",{id:d.yabataltim})){S.tb_tim="baru";render()}return}
   if(d.act==="tambahper"){S.tambahPer=!S.tambahPer;for(const k of ["pd_buka","pd_tutup"])delete KETIK[k];return render()}
   if(d.bukaper&&b.type==="button"){S.bukaPer=S.bukaPer==d.bukaper?null:+d.bukaper;return render()}
@@ -1457,6 +1459,7 @@ document.addEventListener("change",async e=>{svSimpan(e);
 document.addEventListener("submit",async e=>{
   e.preventDefault(); const f=e.target, v=id=>document.getElementById(id).value.trim();
   const ids=[...f.querySelectorAll("[id]")].map(x=>x.id), linkOk=l=>/^https?:\/\/\S+\.\S+/.test(l);
+  if(f.dataset.nomor){if(await kirim("akun_nomor",{id:f.dataset.nomor,nomor:v("no_"+f.dataset.nomor)},ids)){S.noId=null;render()}return}
   if(f.id==="fLogin"){resetUI();return kirim("masuk",{username:v("lu"),sandi:document.getElementById("lp").value,role:v("lr")},ids)}
   if(f.id==="fSetup"){const s=document.getElementById("st_pass").value;
     if(s!==document.getElementById("st_ulang").value)return toast("Pengulangan password tidak sama");
